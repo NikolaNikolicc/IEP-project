@@ -19,7 +19,7 @@ with application.app_context() as context:
     upgrade()
 
     # init Role
-    ownerRole = Role(name = "owner")
+    ownerRole = Role(name="owner")
     customerRole = Role(name="customer")
     courierRole = Role(name="courier")
 
