@@ -19,9 +19,9 @@ with application.app_context() as context:
     upgrade()
 
     # init Role
-    ownerRole = Role(name="owner")
-    customerRole = Role(name="customer")
-    courierRole = Role(name="courier")
+    ownerRole = Role(id="owner")
+    customerRole = Role(id="customer")
+    courierRole = Role(id="courier")
 
     database.session.add(ownerRole)
     database.session.add(customerRole)
@@ -35,6 +35,6 @@ with application.app_context() as context:
     database.session.commit()
 
     # init UserRole
-    userRole = UserRole(userId = owner.id, roleId = ownerRole.id)
+    userRole = UserRole(userId = owner.id, roleId = "owner")
     database.session.add(userRole)
     database.session.commit()

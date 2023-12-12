@@ -61,8 +61,8 @@ def register_courier():
     database.session.add(newUser)
     database.session.commit()
 
-    role = Role.query.filter(Role.name == "courier").first()
-    userRole = UserRole(userId=newUser.id, roleId=role.id)
+    # role = Role.query.filter(Role.name == "courier").first()
+    userRole = UserRole(userId=newUser.id, roleId="courier")
     database.session.add(userRole)
     database.session.commit()
 
@@ -110,8 +110,8 @@ def register_customer():
     database.session.add(newUser)
     database.session.commit()
 
-    role = Role.query.filter(Role.name == "customer").first()
-    userRole = UserRole(userId=newUser.id, roleId=role.id)
+    # role = Role.query.filter(Role.name == "customer").first()
+    userRole = UserRole(userId=newUser.id, roleId="customer")
     database.session.add(userRole)
     database.session.commit()
 
@@ -128,14 +128,11 @@ def login():
     passwordEmpty = len(password) == 0
 
     errMsg = ""
-    exception = False
 
     if emailEmpty:
-        exception = True
         errMsg += "Field email is missing."
         return jsonify({"message": errMsg}), 400
     if passwordEmpty:
-        exception = True
         errMsg += "Field password is missing."
         return jsonify({"message": errMsg}), 400
 
@@ -147,7 +144,7 @@ def login():
     if not user:
         return jsonify({"message": "Invalid credentials."}), 400
 
-    roleList = [str(role.id) for role in user.roles]
+    roleList = [role.id for role in user.roles]
     roleString = ""
     for i in range(len(roleList)):
         roleString += roleList[i]
