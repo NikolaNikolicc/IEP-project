@@ -11,6 +11,16 @@ services:
       retries: 10
     ports:
       - 3306:3306
+  storeDatabase:
+    image: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+    healthcheck:
+      test: [ "CMD", "mysqladmin", "ping", "-h", "localhost" ]
+      timeout: 10s
+      retries: 10
+    ports:
+      - 3307:3306
   authenticationDatabaseMigration:
     image: authenticationdatabasemigration
     environment:
@@ -26,3 +36,11 @@ services:
       - authenticationDatabaseMigration
     ports:
       - 5000:5000
+  storeOwner:
+    image: storeowner
+    environment:
+      - DATABASE_URL=authenticationDatabase
+    depends_on:
+      - authenticationDatabaseMigration
+    ports:
+      - 5001:5001
