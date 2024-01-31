@@ -36,11 +36,12 @@ services:
       - authenticationDatabaseMigration
     ports:
       - 5000:5000
-  storeOwner:
-    image: storeowner
-    environment:
-      - DATABASE_URL=authenticationDatabase
-    depends_on:
-      - authenticationDatabaseMigration
-    ports:
-      - 5001:5001
+#  storeOwner:
+#    image: storeowner
+#    environment:
+#      - DATABASE_URL=authenticationDatabase
+#    depends_on:
+#      storeDatabase:
+#        condition: service_healthy
+#    ports:
+#      - 5001:5001
