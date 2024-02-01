@@ -4,6 +4,8 @@ from configuration import Configuration
 from models import database, Product, Category, ProductCategory, ProductOrder, Order
 from functools import wraps
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request, JWTManager
+from requests import request as rq
+import json
 import csv
 
 application = Flask(__name__)
@@ -102,34 +104,35 @@ def update():
 @roleCheck(role = "owner")
 def product_statistics():
 
-    query = (
-        database.session.query(ProductOrder, Order, Product)
-        .join(Order, ProductOrder.orderId == Order.id)
-        .join(Product, ProductOrder.productId == Product.id)
-    )
+    # query = (
+    #     database.session.query(ProductOrder, Order, Product)
+    #     .join(Order, ProductOrder.orderId == Order.id)
+    #     .join(Product, ProductOrder.productId == Product.id)
+    # )
+    #
+    # orderedProducts = query.all()
+    #
+    # productDict = {}
+    # for productOrder, order, product in orderedProducts:
+    #     if product.name not in productDict.keys():
+    #         productDict[product.name] = {"name":product.name, "sold":0, "waiting":0}
+    #     if(order.status == "COMPLETE"):
+    #         productDict[product.name]["sold"] += productOrder.quantity
+    #     else:
+    #         productDict[product.name]["waiting"] += productOrder.quantity
+    #
+    # sortedProductDict = dict(sorted(productDict.items(), key = lambda item:[0]))
+    # productList = []
+    # for key, value in sortedProductDict.items():
+    #     productList.append(value)
 
-    orderedProducts = query.all()
+    # return jsonify({"statistics":productList}),200
 
-    productDict = {}
-    for productOrder, order, product in orderedProducts:
-        if product.name not in productDict.keys():
-            productDict[product.name] = {"name":product.name, "sold":0, "waiting":0}
-        if(order.status == "COMPLETE"):
-            productDict[product.name]["sold"] += productOrder.quantity
-        else:
-            productDict[product.name]["waiting"] += productOrder.quantity
-
-    sortedProductDict = dict(sorted(productDict.items(), key = lambda item:[0]))
-    productList = []
-    for key, value in sortedProductDict.items():
-        productList.append(value)
-
-    return jsonify({"statistics":productList}),200
+    return jsonify(json.loads(rq(method="get",url="http://sparkApp:5004/product_statistics").text)),200
 
 @application.route("/category_statistics", methods=["GET"])
 @roleCheck(role = "owner")
 def category_statistics():
-
     query = (
         database.session.query(ProductOrder, Order, Product)
         .join(Order, ProductOrder.orderId == Order.id)
