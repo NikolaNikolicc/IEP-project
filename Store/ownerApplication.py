@@ -133,30 +133,32 @@ def product_statistics():
 @application.route("/category_statistics", methods=["GET"])
 @roleCheck(role = "owner")
 def category_statistics():
-    query = (
-        database.session.query(ProductOrder, Order, Product)
-        .join(Order, ProductOrder.orderId == Order.id)
-        .join(Product, ProductOrder.productId == Product.id)
-        .filter(Order.status == "COMPLETE")
-    )
+    # query = (
+    #     database.session.query(ProductOrder, Order, Product)
+    #     .join(Order, ProductOrder.orderId == Order.id)
+    #     .join(Product, ProductOrder.productId == Product.id)
+    #     .filter(Order.status == "COMPLETE")
+    # )
+    #
+    # orderedProducts = query.all()
+    #
+    # categoryDict = {}
+    # categories = Category.query.all()
+    # for cat in categories:
+    #     categoryDict[cat.id] = 0
+    #
+    # for productOrder, order, product in orderedProducts:
+    #     for cat in product.categories:
+    #         categoryDict[cat.id] += productOrder.quantity
+    #
+    # sortedCategories = dict(sorted(categoryDict.items(), key=lambda item: (-item[1], item[0])))
+    # categoryList = []
+    # for key in sortedCategories.keys():
+    #     categoryList.append(key)
 
-    orderedProducts = query.all()
+    # return jsonify({"statistics":categoryList}),200
 
-    categoryDict = {}
-    categories = Category.query.all()
-    for cat in categories:
-        categoryDict[cat.id] = 0
-
-    for productOrder, order, product in orderedProducts:
-        for cat in product.categories:
-            categoryDict[cat.id] += productOrder.quantity
-
-    sortedCategories = dict(sorted(categoryDict.items(), key=lambda item: (-item[1], item[0])))
-    categoryList = []
-    for key in sortedCategories.keys():
-        categoryList.append(key)
-
-    return jsonify({"statistics":categoryList}),200
+    return jsonify(json.loads(rq(method="get", url="http://sparkApp:5004/category_statistics").text)), 200
 
 @application.route("/", methods=["GET"])
 def index():

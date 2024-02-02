@@ -1,5 +1,4 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import col
 import json
 import os
 
@@ -42,28 +41,24 @@ joinedDF = productOrderDF \
 
 rows = joinedDF.collect()
 
-# productDict = {}
-# for row in rows:
-#     name = row["products.name"]
-#     quantity = row["productorder.quantity"]
-#     if name not in productDict.keys():
-#         productDict[name] = {"name":name, "sold":0, "waiting":0}
-#     if(row["orders.status"] == "COMPLETE"):
-#         productDict[name]["sold"] += quantity
-#     else:
-#         productDict[name]["waiting"] += quantity
-#
-# sortedProductDict = dict(sorted(productDict.items(), key = lambda item: item[0]))
-# productList = []
-# for key, value in sortedProductDict.items():
-#     productList.append(value)
-#
-# with open("/app/Store/spark/product_statistics.txt", "w") as psfile:
-#     psfile.write(json.dumps({"statistics":productList}))
+productDict = {}
+for row in rows:
+    name = row["name"]
+    quantity = row["quantity"]
+    if name not in productDict.keys():
+        productDict[name] = {"name":name, "sold":0, "waiting":0}
+    if(row["status"] == "COMPLETE"):
+        productDict[name]["sold"] += quantity
+    else:
+        productDict[name]["waiting"] += quantity
+
+sortedProductDict = dict(sorted(productDict.items(), key = lambda item: item[0]))
+productList = []
+for key, value in sortedProductDict.items():
+    productList.append(value)
 
 with open("/app/Store/spark/product_statistics.txt", "w") as psfile:
-    psfile.write(json.dumps({"statistics": rows}))
-
+    psfile.write(json.dumps({"statistics":productList}))
 
 # Stop the Spark session
 spark.stop()
