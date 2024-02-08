@@ -155,6 +155,7 @@ def login():
         "forename": user.forename,
         "surname": user.surname,
         "password": user.password,
+        "roles": roleString,
         "roleId": roleString
     }
 

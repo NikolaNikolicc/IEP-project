@@ -6,7 +6,10 @@ from models import database, Product, Category, ProductCategory, ProductOrder, O
 from functools import wraps
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request, JWTManager
 import csv
-from datetime import datetime
+from ethConfiguration import web3, owner, solidityContract, abi, bytecode
+from web3 import Account
+from web3.exceptions import ContractLogicError
+import json
 
 application = Flask(__name__)
 application.config.from_object(Configuration)
@@ -51,6 +54,28 @@ def pick_up_order():
     order = Order.query.filter(and_((Order.id == id), (Order.status == "CREATED"))).first()
     if(order == None):
         return jsonify({"message": "Invalid order id."}),400
+
+    # blockchain
+    data = request.get_json()
+    if ("address" not in data or ("address" in data and len(str(data["address"])) == 0)):
+        return jsonify({"message": "Missing address."}), 400
+
+    addr = data["address"]
+
+    if (not web3.is_address(addr)):
+        return jsonify({"message": "Invalid address."}), 400
+
+    try:
+        orderContract = web3.eth.contract(address=order.contract, abi=abi)
+        transactionHash = orderContract.functions.pick_up_order(addr).transact({
+            "from": owner
+        })
+        transactionReceipt = web3.eth.wait_for_transaction_receipt(transactionHash)
+    except ContractLogicError as error:
+        revertError = str(error)
+        revertStartIndex = revertError.find("revert ")
+        finalError = revertError[revertStartIndex + 7:]
+        return jsonify({"message": finalError}), 400
 
     order.status = "PENDING"
     database.session.commit()

@@ -154,6 +154,13 @@ services:
       - ENABLE_INIT_DAEMON=False
       - DATABASE_URL=storeDatabase
 
+  ganache:
+    image: trufflesuite/ganache-cli
+    ports:
+      - "8545:8545"
+    networks:
+      - store_network
+
 volumes:
   authentication_data:
   store_data:

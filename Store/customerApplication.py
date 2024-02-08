@@ -7,6 +7,11 @@ from functools import wraps
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt, verify_jwt_in_request, JWTManager
 import csv
 from datetime import datetime
+from ethConfiguration import web3, owner, solidityContract, abi, bytecode
+from web3 import Account
+from web3.exceptions import ContractLogicError
+import json
+import math
 
 application = Flask(__name__)
 application.config.from_object(Configuration)
@@ -131,11 +136,26 @@ def order():
     for product in existingProducts:
         dictExistingProducts[product.id] = product
 
-    # validation passed
+    if("address" not in data or ("address" in data and len(str(data["address"])) == 0)):
+        return jsonify({"message":"Field address is missing."}), 400
+
+    addr = data["address"]
+
+    if(not web3.is_address(addr)):
+        return jsonify({"message":"Invalid address."}), 400
+
+    # validations passed
     price = 0
     for i in range(len(reqProductsId)):
         price += dictExistingProducts[reqProductsId[i]].price * reqProductQuantities[i]
-    o = Order(totalPrice = price, status = "CREATED", datetime = datetime.now(), customer = get_jwt_identity())
+
+    transactionHash = solidityContract.constructor(addr, math.ceil(price)).transact({
+        "from": owner
+    })
+    transactionReceipt = web3.eth.wait_for_transaction_receipt(transactionHash)
+    contractAddress = transactionReceipt.contractAddress
+
+    o = Order(totalPrice = price, status = "CREATED", datetime = datetime.now(), customer = get_jwt_identity(), contract = contractAddress)
     database.session.add(o)
     database.session.commit()
 
@@ -217,10 +237,107 @@ def delivered():
     if(order == None):
         return jsonify({"message": "Invalid order id."}),400
 
+    # blockchain
+    keys = request.json.get("keys", "")
+    emptyKeys = len(str(keys)) == 0
+    if(emptyKeys):
+        return jsonify({"message": "Missing keys."}),400
+
+    passphrase = request.json.get("passphrase", "")
+    emptyPassphrase = len(str(passphrase)) == 0
+    if(emptyPassphrase):
+        return jsonify({"message": "Missing passphrase."}), 400
+
+    keys = json.loads(keys.replace("'",'"'))
+
+    try:
+        address = web3.to_checksum_address(keys["address"])
+        privateKey = Account.decrypt(keys, passphrase).hex()
+        try:
+            orderContract = web3.eth.contract(address = order.contract, abi = abi)
+            transaction = orderContract.functions.delivery().build_transaction({
+                "from": address,
+                "nonce": web3.eth.get_transaction_count(address),
+                "gasPrice": 21000
+            })
+            signedTransaction = web3.eth.account.sign_transaction(transaction, privateKey)
+            transactionHash = web3.eth.send_raw_transaction(signedTransaction.rawTransaction)
+            transactionReceipt = web3.eth.wait_for_transaction_receipt(transactionHash)
+        except ContractLogicError as error:
+            revertError = str(error)
+            revertStartIndex = revertError.find("revert ")
+            finalError = revertError[revertStartIndex + 7:]
+            return jsonify({"message": finalError}), 400
+
+    except ValueError:
+        return jsonify({"message": "Invalid credentials."}), 400
+
+    # regular
     order.status = "COMPLETE"
     database.session.commit()
 
     return Response(status = 200)
+
+@application.route("/pay", methods=["POST"])
+@roleCheck("customer")
+def pay():
+    id = request.json.get("id", "")
+    emptyId = len(str(id)) == 0
+    if (emptyId):
+        return jsonify({"message": "Missing order id."}), 400
+
+    if(not isinstance(id,int) or id < 1):
+        return jsonify({"message": "Invalid order id."}), 400
+
+    order = Order.query.filter(Order.id == id).first()
+    if(order == None):
+        return jsonify({"message": "Invalid order id."}),400
+
+    data = request.get_json()
+
+    if("keys" not in data or ("keys" in data and data["keys"] == "")):
+        return jsonify({"message":"Missing keys."}), 400
+
+    if("passphrase" not in data or ("passphrase" in data and data["passphrase"] == "")):
+        return jsonify({"message":"Missing passphrase."}), 400
+
+    keys = request.json.get("keys", "")
+    # emptyKeys = len(str(keys))
+    # if(emptyKeys):
+    #     return jsonify({"message": "Missing keys."}), 400
+
+    passphrase = request.json.get("passphrase", "")
+    # emptyPassphrase = len(str(passphrase)) == 0
+    # if (emptyPassphrase):
+    #     return jsonify({"message": "Missing passphrase."}), 400
+
+    keys = json.loads(keys.replace("'", '"'))
+
+    try:
+        address = web3.to_checksum_address(keys["address"])
+        privateKey = Account.decrypt(keys, passphrase).hex()
+        try:
+            orderContract = web3.eth.contract(address = order.contract, abi = abi)
+            transaction = orderContract.functions.pay().build_transaction({
+                "from": address,
+                "value": math.ceil(order.totalPrice),
+                "nonce": web3.eth.get_transaction_count(address),
+                "gasPrice": 21000
+            })
+            signedTransaction = web3.eth.account.sign_transaction(transaction, privateKey)
+            transactionHash = web3.eth.send_raw_transaction(signedTransaction.rawTransaction)
+            transactionReceipt = web3.eth.wait_for_transaction_receipt(transactionHash)
+        except ContractLogicError as error:
+            revertError = str(error)
+            revertStartIndex = revertError.find("revert ")
+            finalError = revertError[revertStartIndex + 7:]
+            return jsonify({"message": finalError}), 400
+
+    except ValueError:
+        return jsonify({"message": "Invalid credentials."}), 400
+
+    return jsonify(), 200
+
 
 @application.route("/", methods=["GET"])
 def index():

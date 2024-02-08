@@ -44,5 +44,6 @@ class Order(database.Model):
     status = database.Column(database.String(256), nullable=False)
     datetime = database.Column(database.DateTime, default=datetime.utcnow, nullable=False)
     customer = database.Column(database.String(256), nullable=False)
+    contract = database.Column(database.String(256), nullable=False)
 
     products = database.relationship("Product", secondary=ProductOrder.__table__, back_populates="orders")
